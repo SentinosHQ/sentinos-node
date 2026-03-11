@@ -1,0 +1,45 @@
+{
+  "name": "@sentinos/node",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SentinosHQ/sentinos-node.git"
+  },
+  "homepage": "https://github.com/SentinosHQ/sentinos-node#readme",
+  "bugs": {
+    "url": "https://github.com/SentinosHQ/sentinos-node/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "vendor:types": "node scripts/vendor-shared-types.mjs",
+    "build": "npm run vendor:types && tsc -p tsconfig.json",
+    "test": "npm run vendor:types && vitest run",
+    "seed:demo": "npm run build && node scripts/seed-demo.mjs",
+    "provenance:check": "node scripts/check-provenance-ready.mjs",
+    "release:check": "bash scripts/check-cleanroom-release.sh"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "typescript": "~5.8.2",
+    "vitest": "^3.2.4"
+  }
+}
