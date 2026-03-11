@@ -8,10 +8,14 @@ This package is published to npm as `@sentinos/node`.
 
 1. Ensure the `@sentinos` npm scope exists and that this package is created under it.
 2. In npm package settings, configure GitHub Actions trusted publishing for:
+   - package name: `@sentinos/node`
    - owner: `SentinosHQ`
    - repository: `sentinos-node`
    - workflow: `publish.yml`
+   - environment: leave blank unless you later add a protected GitHub Actions environment
 3. Confirm the package is public.
+
+This trusted publisher registration is done in npm package settings. The repository cannot self-register it.
 
 ### 2) Local prerequisites
 
