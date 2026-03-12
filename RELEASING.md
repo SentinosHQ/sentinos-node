@@ -20,7 +20,7 @@ This trusted publisher registration is done in npm package settings. The reposit
 ### 2) Local prerequisites
 
 - Node.js 20+
-- npm 10+
+- npm 11.5.1+
 
 ## Preflight (Must Pass)
 
@@ -62,6 +62,12 @@ git push origin main --tags
 ```
 
 3. GitHub Actions `publish.yml` publishes the package with npm provenance.
+
+## Trusted Publishing Notes
+
+- npm trusted publishing currently requires npm 11.5.1 or newer.
+- The workflow upgrades npm before publishing so OIDC publishing does not silently fall back to token-style auth behavior.
+- If a publish run fails after build/test/provenance checks pass, inspect the runner's npm version first.
 
 ## Clean-Room Verification
 
