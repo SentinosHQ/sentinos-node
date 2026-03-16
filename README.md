@@ -1,5 +1,7 @@
 # @sentinos/node
 
+![Sentinos](assets/og-default.png)
+
 TypeScript and Node.js SDK for Sentinos.
 
 `@sentinos/node` gives Node services and agent runtimes typed access to Sentinos Kernel, Arbiter, Chronos, Controlplane, Marketplace, trace forensics, alerts, incidents, and A2A handoff workflows.
@@ -149,25 +151,3 @@ console.log(result.trace.trace_id, result.trace.decision);
 - `client.incidents`
 - `client.marketplace`
 - `client.meshgate`
-
-## Local parity proof
-
-The package includes a local seed harness that exercises the live Docker stack via the SDK and produces console login artifacts.
-
-```bash
-npm run seed:demo
-```
-
-Artifacts are written to `${SENTINOS_SEED_OUTPUT_DIR:-$TMPDIR/sentinos_seed_demo}` and include:
-
-- `latest_seed.json`
-- `console_login.js`
-
-## Development
-
-```bash
-npm install
-npm run build
-npm test
-npm run seed:demo
-```

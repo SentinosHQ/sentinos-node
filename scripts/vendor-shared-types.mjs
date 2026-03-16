@@ -16,6 +16,6 @@ if (existsSync(sourceDir)) {
   console.log(`Using checked-in shared Sentinos types from ${targetDir}`);
 } else {
   throw new Error(
-    `Could not locate monorepo shared types at ${sourceDir} or checked-in types at ${targetDir}.`,
+    `Could not locate shared types at ${sourceDir} or checked-in types at ${targetDir}.`,
   );
 }

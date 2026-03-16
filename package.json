@@ -32,7 +32,6 @@
     "vendor:types": "node scripts/vendor-shared-types.mjs",
     "build": "npm run vendor:types && tsc -p tsconfig.json",
     "test": "npm run vendor:types && vitest run",
-    "seed:demo": "npm run build && node scripts/seed-demo.mjs",
     "provenance:check": "node scripts/check-provenance-ready.mjs",
     "release:check": "bash scripts/check-cleanroom-release.sh"
   },
