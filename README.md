@@ -1,25 +1,39 @@
-# @sentinos/node
+# `@sentinos/node`
 
-![Sentinos](assets/og-default.png)
+![Sentinos Node SDK](https://raw.githubusercontent.com/SentinosHQ/sentinos-node/main/assets/og-default.png)
 
-TypeScript and Node.js SDK for Sentinos.
+Official TypeScript-first SDK for Sentinos. Use it to govern agent actions, inspect decision traces, replay policy outcomes, and connect Node runtimes to Sentinos services from one typed client.
 
-`@sentinos/node` gives Node services and agent runtimes typed access to Sentinos Kernel, Arbiter, Chronos, Controlplane, Marketplace, trace forensics, alerts, incidents, and A2A handoff workflows.
+## Requirements
 
-## Install
+- Node.js **20** or newer (ESM runtime only)
+- The package is shipped as an ES module, so your loader/build tooling must honor `type: "module"`
+
+## Docs & resources
+
+- [Sentinos SDK docs](https://docs.sentinoshq.com/sdk/)
+- [Repository and API surface](https://github.com/SentinosHQ/sentinos-node)
+- [Release notes](https://github.com/SentinosHQ/sentinos-node/releases)
+- [Issue tracker](https://github.com/SentinosHQ/sentinos-node/issues)
+
+## Quickstart
 
 ```bash
 npm install @sentinos/node
 ```
 
-## Quickstart
+Before you run the first request, make sure you have:
+
+- a Sentinos API base URL such as `https://api.sentinos.ai`
+- an organization id
+- an access token or API key
 
 ```ts
 import { JWTAuth, SentinosClient } from "@sentinos/node";
 
-const client = SentinosClient.simple("https://api.sentinoshq.com", {
+const client = SentinosClient.simple("https://api.sentinos.ai", {
   orgId: "acme",
-  auth: new JWTAuth(() => process.env.SENTINOS_ACCESS_TOKEN || ""),
+  auth: new JWTAuth(async () => process.env.SENTINOS_ACCESS_TOKEN ?? ""),
 });
 
 const result = await client.kernel.execute({
@@ -36,17 +50,17 @@ const result = await client.kernel.execute({
 console.log(result.decision, result.trace_id);
 ```
 
-## From Environment
+`SentinosClient.simple` wires up the base URL, organization, and authentication so you can focus on orchestrating agents.
+
+## Environment configuration
 
 ```ts
 import { SentinosClient } from "@sentinos/node";
 
 const client = SentinosClient.fromEnv();
-const trace = await client.kernel.getTrace("trace_123");
-console.log(trace.decision);
 ```
 
-Supported environment variables:
+The SDK honors the following environment variables:
 
 - `SENTINOS_BASE_URL` (aliases: `SENTINOS_API_URL`, `SENTINOS_URL`)
 - `SENTINOS_KERNEL_URL`
@@ -57,6 +71,12 @@ Supported environment variables:
 - `SENTINOS_ORG_ID` (alias: `SENTINOS_TENANT_ID`)
 - `SENTINOS_ACCESS_TOKEN`
 - `SENTINOS_TIMEOUT_SECONDS`
+
+Workforce sessions add:
+
+- `SENTINOS_WORKFORCE_IDP_ISSUER`
+- `SENTINOS_WORKFORCE_EXCHANGE_AUDIENCE`
+- `SENTINOS_WORKFORCE_REQUESTED_TTL_MINUTES`
 
 ## Authentication
 
@@ -78,15 +98,15 @@ import { APIKeyAuth, SentinosClient } from "@sentinos/node";
 
 const client = new SentinosClient({
   orgId: "acme",
-  kernelUrl: "https://kernel.sentinoshq.com",
-  arbiterUrl: "https://arbiter.sentinoshq.com",
-  chronosUrl: "https://chronos.sentinoshq.com",
-  controlplaneUrl: "https://app.sentinoshq.com",
-  auth: new APIKeyAuth(process.env.SENTINOS_API_KEY || ""),
+  kernelUrl: process.env.SENTINOS_KERNEL_URL!,
+  arbiterUrl: process.env.SENTINOS_ARBITER_URL!,
+  chronosUrl: process.env.SENTINOS_CHRONOS_URL!,
+  controlplaneUrl: process.env.SENTINOS_CONTROLPLANE_URL!,
+  auth: new APIKeyAuth(process.env.SENTINOS_API_KEY ?? ""),
 });
 ```
 
-### Workforce access tokens
+### Workforce tokens
 
 ```ts
 import { SentinosClient, WorkforceTokenProvider } from "@sentinos/node";
@@ -102,20 +122,26 @@ const workforceAuth = WorkforceTokenProvider.fromEnv(async () => ({
 const client = SentinosClient.fromEnv({ auth: workforceAuth });
 ```
 
-Additional workforce env vars:
+## Trace & replay workflow
 
-- `SENTINOS_WORKFORCE_IDP_ISSUER`
-- `SENTINOS_WORKFORCE_EXCHANGE_AUDIENCE`
-- `SENTINOS_WORKFORCE_REQUESTED_TTL_MINUTES`
+Inspecting a trace and replaying it lets you verify why a decision landed where it did and capture evidence for auditors.
+
+```ts
+const trace = await client.traces.getTrace("trace_123");
+
+const replay = await client.traces.replayTrace(trace.trace_id, {
+  include_explain: true,
+  environment_assumptions: { user_tier: "trial" },
+});
+
+console.log("replayed decision", replay.decision);
+```
+
+If you need a full forensic package, follow up with `client.traces.exportReplayEvidence(...)` or `client.traces.replayTraceMatrix(...)` to generate evidence-ready replay output.
 
 ## Runtime integrations
 
-The Node SDK includes `LLMGuard` plus provider adapters for:
-
-- OpenAI chat completions
-- OpenAI responses
-- OpenRouter chat/responses
-- Anthropic messages
+The SDK bundles `LLMGuard` plus adapters for OpenAI chat completions, OpenAI responses, OpenRouter, and Anthropic so you can anchor guardrails around any completion stream.
 
 ```ts
 import { createOpenAIResponsesAdapter, LLMGuard, SentinosClient } from "@sentinos/node";
@@ -127,10 +153,7 @@ const guard = new LLMGuard({
   sessionId: "sess-42",
 });
 
-const adapter = createOpenAIResponsesAdapter({
-  guard,
-  client: openai,
-});
+const adapter = createOpenAIResponsesAdapter({ guard, client: openai });
 
 const result = await adapter.create({
   model: "gpt-4.1-mini",
@@ -142,12 +165,8 @@ console.log(result.trace.trace_id, result.trace.decision);
 
 ## Client surface
 
-- `client.kernel`
-- `client.arbiter`
-- `client.chronos`
-- `client.controlplane`
-- `client.traces`
-- `client.alerts`
-- `client.incidents`
-- `client.marketplace`
-- `client.meshgate`
+- `client.kernel` for governed execution and runtime operations
+- `client.traces` for trace lookup, replay, export, cost, and lineage
+- `client.arbiter` for policy lifecycle and simulation
+- `client.chronos` for context snapshots and provenance
+- `client.alerts`, `client.incidents`, `client.marketplace`, and `client.meshgate` for adjacent Sentinos workflows

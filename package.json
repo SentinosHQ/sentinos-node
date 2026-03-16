@@ -1,6 +1,19 @@
 {
   "name": "@sentinos/node",
-  "version": "0.1.6",
+  "version": "0.1.7",
+  "description": "Sentinos Node.js SDK for orchestrating kernels, policy traces, and Chronos data in production agents",
+  "keywords": [
+    "sentinos",
+    "node",
+    "sdk",
+    "agents",
+    "policy",
+    "trace",
+    "kernel",
+    "chronos",
+    "arbiter",
+    "forensics"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
