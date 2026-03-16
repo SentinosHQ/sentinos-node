@@ -3,9 +3,12 @@ import type { SentinosClient } from "../client.js";
 import type {
   DecisionTrace,
   TraceExportJob,
+  TraceArtifactLineageResponse,
   TraceLedgerVerification,
   TracePrivacyPolicy,
   TracePrivacyScanResult,
+  TraceReplayExportResponse,
+  TraceReplayMatrixResponse,
   TraceReplayResponse,
   TraceRetentionEnforcementRun,
   TraceRetentionPolicy,
@@ -59,9 +62,42 @@ export class TracesClient extends KernelClient {
 
   async replayTrace(
     traceId: string,
-    body?: { policy_keys?: string[]; include_explain?: boolean } & TraceScope
+    body?: {
+      profile?: string;
+      policy_keys?: string[];
+      include_explain?: boolean;
+      include_evidence_hints?: boolean;
+      environment_assumptions?: Record<string, unknown>;
+    } & TraceScope
   ): Promise<TraceReplayResponse> {
     return super.replayTrace(traceId, body);
+  }
+
+  async replayTraceMatrix(
+    traceId: string,
+    body?: {
+      include_explain?: boolean;
+      environment_assumptions?: Record<string, unknown>;
+    } & TraceScope,
+  ): Promise<TraceReplayMatrixResponse> {
+    return super.replayTraceMatrix(traceId, body);
+  }
+
+  async exportReplayEvidence(
+    traceId: string,
+    body?: {
+      profile?: string;
+      policy_keys?: string[];
+      include_explain?: boolean;
+      include_evidence_hints?: boolean;
+      environment_assumptions?: Record<string, unknown>;
+    } & TraceScope,
+  ): Promise<TraceReplayExportResponse> {
+    return super.exportReplayEvidence(traceId, body);
+  }
+
+  async getTraceLineage(traceId: string, scope?: TraceScope): Promise<TraceArtifactLineageResponse> {
+    return super.getTraceLineage(traceId, scope);
   }
 
   async getRetentionPolicy(scope?: TraceScope): Promise<TraceRetentionPolicy> {

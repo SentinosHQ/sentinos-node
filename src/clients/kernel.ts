@@ -1,6 +1,10 @@
 import { ServiceClient, cleanQuery } from "../base.js";
 import type {
   BillingEntitlements,
+  KernelCostAnomaliesResponse,
+  KernelCostAvoidedResponse,
+  KernelCostEventsResponse,
+  KernelCostSummaryResponse,
   BillingUsageEvent,
   BillingUsageSummary,
   DecisionTrace,
@@ -8,10 +12,16 @@ import type {
   NotificationChannel,
   NotificationTestResult,
   NotificationValidationResult,
+  OtelExportConfig,
+  OtelExportStatus,
+  OtelExportTestResult,
   TraceExportJob,
+  TraceArtifactLineageResponse,
   TraceLedgerVerification,
   TracePrivacyPolicy,
   TracePrivacyScanResult,
+  TraceReplayExportResponse,
+  TraceReplayMatrixResponse,
   TraceReplayResponse,
   TraceRetentionEnforcementRun,
   TraceRetentionPolicy,
@@ -66,14 +76,87 @@ export class KernelClient extends ServiceClient {
 
   async replayTrace(
     traceId: string,
-    body?: { policy_keys?: string[]; include_explain?: boolean; tenantId?: string; orgId?: string }
+    body?: {
+      profile?: string;
+      policy_keys?: string[];
+      include_explain?: boolean;
+      include_evidence_hints?: boolean;
+      environment_assumptions?: Record<string, unknown>;
+      tenantId?: string;
+      orgId?: string;
+    }
   ): Promise<TraceReplayResponse> {
     return this.request(`/v1/trace/${encodeURIComponent(traceId)}/replay`, {
       method: "POST",
-      body: body ? { policy_keys: body.policy_keys, include_explain: body.include_explain } : {},
+      body: body
+        ? {
+            profile: body.profile,
+            policy_keys: body.policy_keys,
+            include_explain: body.include_explain,
+            include_evidence_hints: body.include_evidence_hints,
+            environment_assumptions: body.environment_assumptions,
+          }
+        : {},
       tenantId: body?.tenantId,
       orgId: body?.orgId,
     });
+  }
+
+  async replayTraceMatrix(
+    traceId: string,
+    body?: {
+      include_explain?: boolean;
+      environment_assumptions?: Record<string, unknown>;
+      tenantId?: string;
+      orgId?: string;
+    },
+  ): Promise<TraceReplayMatrixResponse> {
+    return this.request(`/v1/trace/${encodeURIComponent(traceId)}/replay/matrix`, {
+      method: "POST",
+      body: body
+        ? {
+            include_explain: body.include_explain,
+            environment_assumptions: body.environment_assumptions,
+          }
+        : {},
+      tenantId: body?.tenantId,
+      orgId: body?.orgId,
+    });
+  }
+
+  async exportReplayEvidence(
+    traceId: string,
+    body?: {
+      profile?: string;
+      policy_keys?: string[];
+      include_explain?: boolean;
+      include_evidence_hints?: boolean;
+      environment_assumptions?: Record<string, unknown>;
+      tenantId?: string;
+      orgId?: string;
+    },
+  ): Promise<TraceReplayExportResponse> {
+    return this.request(`/v1/trace/${encodeURIComponent(traceId)}/replay/export`, {
+      method: "POST",
+      body: body
+        ? {
+            profile: body.profile,
+            policy_keys: body.policy_keys,
+            include_explain: body.include_explain,
+            include_evidence_hints: body.include_evidence_hints,
+            environment_assumptions: body.environment_assumptions,
+          }
+        : {},
+      tenantId: body?.tenantId,
+      orgId: body?.orgId,
+    });
+  }
+
+  async getTraceLineage(
+    traceId: string,
+    scope?: { tenantId?: string; orgId?: string }
+  ): Promise<TraceArtifactLineageResponse> {
+    return this.request(`/v1/traces/${encodeURIComponent(traceId)}/lineage`, scope);
   }
 
   async getSession(sessionId: string): Promise<{ tenant_id: string; session_id: string; state: unknown }> {
@@ -384,6 +467,35 @@ export class KernelClient extends ServiceClient {
     return this.request<Record<string, unknown>>("/v1/integrations/health", scope);
   }
 
+  async getOtelExportConfig(scope?: { tenantId?: string; orgId?: string }): Promise<OtelExportConfig> {
+    return this.request("/v1/integrations/otel/config", scope);
+  }
+
+  async updateOtelExportConfig(
+    body: OtelExportConfig & { tenantId?: string; orgId?: string }
+  ): Promise<OtelExportConfig> {
+    const { tenantId, orgId, ...payload } = body;
+    return this.request("/v1/integrations/otel/config", {
+      method: "PUT",
+      body: payload,
+      tenantId,
+      orgId,
+    });
+  }
+
+  async getOtelExportStatus(scope?: { tenantId?: string; orgId?: string }): Promise<OtelExportStatus> {
+    return this.request("/v1/integrations/otel/status", scope);
+  }
+
+  async testOtelExport(scope?: { tenantId?: string; orgId?: string }): Promise<OtelExportTestResult> {
+    return this.request("/v1/integrations/otel/test", {
+      method: "POST",
+      body: {},
+      tenantId: scope?.tenantId,
+      orgId: scope?.orgId,
+    });
+  }
+
   async exportDatadog(body: Record<string, unknown> & { tenantId?: string; orgId?: string }) {
     const { tenantId, orgId, ...payload } = body;
     return this.request<Record<string, unknown>>("/v1/integrations/datadog/export", {
@@ -456,6 +568,58 @@ export class KernelClient extends ServiceClient {
 
   async listBillingUsageEvents(params: { period_at?: string; limit?: number; tenantId?: string; orgId?: string } = {}): Promise<{ events: BillingUsageEvent[] }> {
     return this.request("/v1/kernel/billing/usage/events", {
+      query: cleanQuery(params),
+      tenantId: params.tenantId,
+      orgId: params.orgId,
+    });
+  }
+
+  async getCostSummary(params: {
+    group_by?: "session" | "actor" | "agent" | "provider_model" | "tool" | "day";
+    from?: string;
+    to?: string;
+    tenantId?: string;
+    orgId?: string;
+  } = {}): Promise<KernelCostSummaryResponse> {
+    return this.request("/v1/kernel/cost/summary", {
+      query: cleanQuery(params),
+      tenantId: params.tenantId,
+      orgId: params.orgId,
+    });
+  }
+
+  async listCostEvents(params: {
+    trace_id?: string;
+    session_id?: string;
+    actor?: string;
+    agent_id?: string;
+    provider?: string;
+    model?: string;
+    tool?: string;
+    kind?: "llm" | "tool" | "retry" | "replay" | "export" | "blocked" | "approval_wait" | "other";
+    from?: string;
+    to?: string;
+    limit?: number;
+    tenantId?: string;
+    orgId?: string;
+  } = {}): Promise<KernelCostEventsResponse> {
+    return this.request("/v1/kernel/cost/events", {
+      query: cleanQuery(params),
+      tenantId: params.tenantId,
+      orgId: params.orgId,
+    });
+  }
+
+  async getCostAvoided(params: { from?: string; to?: string; tenantId?: string; orgId?: string } = {}): Promise<KernelCostAvoidedResponse> {
+    return this.request("/v1/kernel/cost/avoided", {
+      query: cleanQuery(params),
+      tenantId: params.tenantId,
+      orgId: params.orgId,
+    });
+  }
+
+  async listCostAnomalies(params: { from?: string; to?: string; limit?: number; tenantId?: string; orgId?: string } = {}): Promise<KernelCostAnomaliesResponse> {
+    return this.request("/v1/kernel/cost/anomalies", {
       query: cleanQuery(params),
       tenantId: params.tenantId,
       orgId: params.orgId,

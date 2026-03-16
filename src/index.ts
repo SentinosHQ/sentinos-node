@@ -4,4 +4,5 @@ export * from "./client.js";
 export * from "./http.js";
 export * from "./integrations/llm.js";
 export * from "./integrations/providers.js";
+export * from "./integrations/telemetry.js";
 export * from "./types.js";

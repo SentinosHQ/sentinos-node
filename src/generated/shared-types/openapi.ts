@@ -348,6 +348,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/kernel/cost/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get grouped runtime cost summary */
+        get: operations["kernelGetCostSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/kernel/cost/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List normalized runtime cost events */
+        get: operations["kernelListCostEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/kernel/cost/avoided": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get avoided runtime cost aggregates */
+        get: operations["kernelGetCostAvoided"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/kernel/cost/anomalies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List runtime cost anomalies */
+        get: operations["kernelListCostAnomalies"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/kernel/jsonrpc": {
         parameters: {
             query?: never;
@@ -888,6 +956,23 @@ export interface paths {
         put?: never;
         /** Replay a trace against current policy chain to detect decision drift */
         post: operations["traceReplay"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/traces/{trace_id}/lineage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch artifact and side-effect lineage for a trace */
+        get: operations["traceGetLineage"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3698,6 +3783,214 @@ export interface components {
         /** @enum {string} */
         Decision: "ALLOW" | "DENY" | "ESCALATE" | "SHADOW";
         DecisionTrace: components["schemas"]["decision-trace.schema"];
+        DecisionTracePolicyCheck: {
+            key: string;
+            label: string;
+            /** @enum {string} */
+            category: "permission" | "approval" | "budget" | "privacy" | "handoff" | "identity" | "tool" | "context" | "other";
+            /** @enum {string} */
+            status: "CHECKED" | "ALLOWED" | "DENIED" | "ESCALATED" | "SHADOWED";
+            reason?: string;
+            matched?: boolean;
+            metadata?: {
+                [key: string]: unknown;
+            };
+        };
+        /** @enum {string} */
+        TraceArtifactKind: "file" | "connector" | "domain" | "output" | "handoff" | "other";
+        /** @enum {string} */
+        TraceArtifactStatus: "observed" | "produced" | "consumed" | "blocked";
+        /** @enum {string} */
+        TraceArtifactAction: "read" | "write" | "call" | "egress" | "produce" | "reuse" | "handoff" | "blocked";
+        TraceArtifactLineageSummary: {
+            artifact_count: number;
+            side_effect_count: number;
+            blocked_count: number;
+            kinds: {
+                [key: string]: number;
+            };
+            top_domains?: string[];
+            top_connectors?: string[];
+            top_outputs?: string[];
+            has_handoff?: boolean;
+            has_writes?: boolean;
+            has_blocked_side_effects?: boolean;
+        };
+        TraceArtifactRef: {
+            artifact_id: string;
+            kind: components["schemas"]["TraceArtifactKind"];
+            label: string;
+            locator?: string;
+            status?: components["schemas"]["TraceArtifactStatus"];
+            chronos_entity_id?: string;
+            chronos_anchor?: string;
+            metadata?: {
+                [key: string]: unknown;
+            };
+        };
+        TraceArtifactLineageEvent: {
+            event_id: string;
+            artifact_id: string;
+            action: components["schemas"]["TraceArtifactAction"];
+            actor?: string;
+            tool?: string;
+            /** Format: date-time */
+            timestamp?: string;
+            related_artifact_id?: string;
+            metadata?: {
+                [key: string]: unknown;
+            };
+        };
+        TraceArtifactLineageResponse: {
+            /** Format: uuid */
+            trace_id: string;
+            summary: components["schemas"]["TraceArtifactLineageSummary"];
+            artifacts: components["schemas"]["TraceArtifactRef"][];
+            events: components["schemas"]["TraceArtifactLineageEvent"][];
+        };
+        /** @enum {string} */
+        DecisionTraceCostPricingSource: "reported" | "estimated" | "mixed" | "unknown";
+        /** @enum {string} */
+        DecisionTraceCostEventKind: "llm" | "tool" | "retry" | "replay" | "export" | "blocked" | "approval_wait" | "other";
+        DecisionTraceCostProviderModelBreakdown: {
+            provider: string;
+            model: string;
+            usd?: number;
+            tokens?: number;
+        };
+        DecisionTraceCostRetryBreakdown: {
+            retry_index: number;
+            usd?: number;
+            tokens?: number;
+        };
+        DecisionTraceCostToolBreakdown: {
+            tool: string;
+            usd?: number;
+            tokens?: number;
+        };
+        DecisionTraceCostActorBreakdown: {
+            actor: string;
+            usd?: number;
+            tokens?: number;
+        };
+        DecisionTraceCostBreakdown: {
+            total_usd?: number;
+            reported_total_usd?: number;
+            estimated_total_usd?: number;
+            pricing_source?: components["schemas"]["DecisionTraceCostPricingSource"];
+            provider?: string;
+            model?: string;
+            input_tokens?: number;
+            output_tokens?: number;
+            cached_tokens?: number;
+            total_tokens?: number;
+            retry_count?: number;
+            tool_call_count?: number;
+            blocked_cost_avoided_usd?: number;
+            blocked_token_avoided?: number;
+            by_category?: {
+                [key: string]: number;
+            };
+            by_provider_model?: components["schemas"]["DecisionTraceCostProviderModelBreakdown"][];
+            by_retry?: components["schemas"]["DecisionTraceCostRetryBreakdown"][];
+            by_tool?: components["schemas"]["DecisionTraceCostToolBreakdown"][];
+            by_actor?: components["schemas"]["DecisionTraceCostActorBreakdown"][];
+        };
+        DecisionTraceCostEvent: {
+            event_id: string;
+            kind: components["schemas"]["DecisionTraceCostEventKind"];
+            label: string;
+            provider?: string;
+            model?: string;
+            tool?: string;
+            actor?: string;
+            retry_index?: number;
+            input_tokens?: number;
+            output_tokens?: number;
+            cached_tokens?: number;
+            total_tokens?: number;
+            reported_usd?: number;
+            estimated_usd?: number;
+            pricing_source?: components["schemas"]["DecisionTraceCostPricingSource"];
+            avoided_usd?: number;
+            avoided_tokens?: number;
+            /** Format: date-time */
+            started_at?: string;
+            /** Format: date-time */
+            finished_at?: string;
+            metadata?: {
+                [key: string]: unknown;
+            };
+        };
+        KernelCostSummaryRow: {
+            label: string;
+            total_usd?: number;
+            reported_total_usd?: number;
+            estimated_total_usd?: number;
+            pricing_source?: components["schemas"]["DecisionTraceCostPricingSource"];
+            total_tokens?: number;
+            blocked_cost_avoided_usd?: number;
+            blocked_token_avoided?: number;
+            trace_count?: number;
+        };
+        KernelCostSummaryResponse: {
+            tenant_id: string;
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            /** @enum {string} */
+            group_by: "session" | "actor" | "agent" | "provider_model" | "tool" | "day";
+            rows: components["schemas"]["KernelCostSummaryRow"][];
+        };
+        KernelCostEventsResponse: {
+            tenant_id: string;
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            events: components["schemas"]["DecisionTraceCostEvent"][];
+        };
+        KernelCostAvoidedRow: {
+            label: string;
+            total_usd?: number;
+            total_tokens?: number;
+            event_count?: number;
+        };
+        KernelCostAvoidedResponse: {
+            tenant_id: string;
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            rows: components["schemas"]["KernelCostAvoidedRow"][];
+        };
+        KernelCostAnomaly: {
+            anomaly_id: string;
+            kind: string;
+            severity: string;
+            dimension: string;
+            baseline: number;
+            observed: number;
+            delta: number;
+            /** Format: uuid */
+            trace_id?: string;
+            session_id?: string;
+            actor?: string;
+            agent_id?: string;
+            provider?: string;
+            model?: string;
+            /** Format: date-time */
+            detected_at: string;
+        };
+        KernelCostAnomaliesResponse: {
+            tenant_id: string;
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            anomalies: components["schemas"]["KernelCostAnomaly"][];
+        };
         ChronosIngestRecord: {
             /** Format: uuid */
             ingest_id: string;
@@ -3941,6 +4234,20 @@ export interface components {
             explain_plan?: {
                 [key: string]: unknown;
             };
+            checks?: components["schemas"]["DecisionTracePolicyCheck"][];
+            cost_breakdown?: components["schemas"]["DecisionTraceCostBreakdown"];
+            cost_events?: components["schemas"]["DecisionTraceCostEvent"][];
+        };
+        TraceReplayComparison: {
+            decision_changed?: boolean;
+            policy_changed?: boolean;
+            reason_changed?: boolean;
+            checks_added?: number;
+            checks_removed?: number;
+            checks_changed?: number;
+            cost_changed?: boolean;
+            total_cost_delta_usd?: number;
+            avoided_cost_delta_usd?: number;
         };
         TraceReplayResponse: {
             /** Format: uuid */
@@ -3952,6 +4259,7 @@ export interface components {
             drift_detected: boolean;
             original?: components["schemas"]["TraceReplayDecision"];
             replay?: components["schemas"]["TraceReplayDecision"];
+            comparison?: components["schemas"]["TraceReplayComparison"];
             ledger_verification?: components["schemas"]["TraceLedgerVerification"];
         };
         TraceRetentionPolicy: {
@@ -4969,7 +5277,89 @@ export interface components {
                     [key: string]: unknown;
                 })[];
                 explain_plan?: Record<string, never>;
+                checks?: {
+                    key: string;
+                    label: string;
+                    /** @enum {string} */
+                    category: "permission" | "approval" | "budget" | "privacy" | "handoff" | "identity" | "tool" | "context" | "other";
+                    /** @enum {string} */
+                    status: "CHECKED" | "ALLOWED" | "DENIED" | "ESCALATED" | "SHADOWED";
+                    reason?: string;
+                    matched?: boolean;
+                    metadata?: {
+                        [key: string]: unknown;
+                    };
+                }[];
             };
+            cost_breakdown?: {
+                total_usd?: number;
+                reported_total_usd?: number;
+                estimated_total_usd?: number;
+                /** @enum {string} */
+                pricing_source?: "reported" | "estimated" | "mixed" | "unknown";
+                provider?: string;
+                model?: string;
+                input_tokens?: number;
+                output_tokens?: number;
+                cached_tokens?: number;
+                total_tokens?: number;
+                retry_count?: number;
+                tool_call_count?: number;
+                blocked_cost_avoided_usd?: number;
+                blocked_token_avoided?: number;
+                by_category?: {
+                    [key: string]: number;
+                };
+                by_provider_model?: {
+                    provider: string;
+                    model: string;
+                    usd?: number;
+                    tokens?: number;
+                }[];
+                by_retry?: {
+                    retry_index: number;
+                    usd?: number;
+                    tokens?: number;
+                }[];
+                by_tool?: {
+                    tool: string;
+                    usd?: number;
+                    tokens?: number;
+                }[];
+                by_actor?: {
+                    actor: string;
+                    usd?: number;
+                    tokens?: number;
+                }[];
+            };
+            cost_events?: {
+                event_id: string;
+                /** @enum {string} */
+                kind: "llm" | "tool" | "retry" | "replay" | "export" | "blocked" | "approval_wait" | "other";
+                label: string;
+                provider?: string;
+                model?: string;
+                tool?: string;
+                actor?: string;
+                retry_index?: number;
+                input_tokens?: number;
+                output_tokens?: number;
+                cached_tokens?: number;
+                total_tokens?: number;
+                reported_usd?: number;
+                estimated_usd?: number;
+                /** @enum {string} */
+                pricing_source?: "reported" | "estimated" | "mixed" | "unknown";
+                avoided_usd?: number;
+                avoided_tokens?: number;
+                /** Format: date-time */
+                started_at?: string;
+                /** Format: date-time */
+                finished_at?: string;
+                metadata?: {
+                    [key: string]: unknown;
+                };
+            }[];
             outcome?: Record<string, never>;
             provenance?: {
                 [key: string]: unknown;
@@ -5012,6 +5402,20 @@ export interface components {
                 system_state?: string;
                 variation_type?: string;
                 external_factors?: string[];
+            };
+            artifact_lineage_summary?: {
+                artifact_count: number;
+                side_effect_count: number;
+                blocked_count: number;
+                kinds: {
+                    [key: string]: number;
+                };
+                top_domains?: string[];
+                top_connectors?: string[];
+                top_outputs?: string[];
+                has_handoff?: boolean;
+                has_writes?: boolean;
+                has_blocked_side_effects?: boolean;
             };
         };
         /** ChronosIngestTracesRequest */
@@ -5847,6 +6251,109 @@ export interface operations {
                     "application/json": {
                         events: components["schemas"]["UsageEvent"][];
                     };
+                };
+            };
+        };
+    };
+    kernelGetCostSummary: {
+        parameters: {
+            query?: {
+                group_by?: "session" | "actor" | "agent" | "provider_model" | "tool" | "day";
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Runtime cost summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KernelCostSummaryResponse"];
+                };
+            };
+        };
+    };
+    kernelListCostEvents: {
+        parameters: {
+            query?: {
+                trace_id?: string;
+                session_id?: string;
+                actor?: string;
+                agent_id?: string;
+                provider?: string;
+                model?: string;
+                tool?: string;
+                kind?: "llm" | "tool" | "retry" | "replay" | "export" | "blocked" | "approval_wait" | "other";
+                from?: string;
+                to?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Runtime cost events */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KernelCostEventsResponse"];
+                };
+            };
+        };
+    };
+    kernelGetCostAvoided: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Avoided runtime cost aggregates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KernelCostAvoidedResponse"];
+                };
+            };
+        };
+    };
+    kernelListCostAnomalies: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Runtime cost anomalies */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KernelCostAnomaliesResponse"];
                 };
             };
         };
@@ -6811,6 +7318,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TraceReplayResponse"];
+                };
+            };
+        };
+    };
+    traceGetLineage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trace lineage */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TraceArtifactLineageResponse"];
                 };
             };
         };
