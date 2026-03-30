@@ -1,6 +1,6 @@
 {
   "name": "@sentinos/node",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Sentinos Node.js SDK for orchestrating kernels, policy traces, and Chronos data in production agents",
   "keywords": [
     "sentinos",
