@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/prompt-compliance/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run a deterministic prompt compliance scan using tenant config or a draft override */
+        post: operations["kernelPromptComplianceScan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/kernel/trace/{trace_id}": {
         parameters: {
             query?: never;
@@ -954,8 +971,42 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Replay a trace against current policy chain to detect decision drift */
+        /** Replay a trace against a selected reconstruction basis to detect decision drift */
         post: operations["traceReplay"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/trace/{trace_id}/replay/matrix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Compare replay outcomes across supported reconstruction profiles */
+        post: operations["traceReplayMatrix"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/trace/{trace_id}/replay/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Export a replay-backed evidence package for a trace */
+        post: operations["traceReplayExport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1448,6 +1499,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/integrations/otel/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get tenant OpenTelemetry export bridge configuration */
+        get: operations["getOtelExportConfig"];
+        /** Update tenant OpenTelemetry export bridge configuration */
+        put: operations["updateOtelExportConfig"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/otel/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get OpenTelemetry export bridge delivery status */
+        get: operations["getOtelExportStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/integrations/otel/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Validate the OpenTelemetry export bridge destination */
+        post: operations["testOtelExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/integrations/datadog/export": {
         parameters: {
             query?: never;
@@ -1731,6 +1834,40 @@ export interface paths {
         put?: never;
         /** Login with email/password */
         post: operations["controlplaneLoginPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/saml/orgs/{org_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get public SAML sign-in readiness for an organization */
+        get: operations["controlplaneGetSAMLLoginStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/saml/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start browser-based SAML sign-in for an organization */
+        post: operations["controlplaneStartSAMLLogin"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2343,6 +2480,23 @@ export interface paths {
         get: operations["controlplaneGetSamlMetadata"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orgs/{org_id}/saml/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test SAML connection readiness */
+        post: operations["controlplaneTestSamlConnection"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3300,7 +3454,9 @@ export interface components {
             };
             evidence?: {
                 [key: string]: unknown;
-            };
+            } | {
+                [key: string]: unknown;
+            }[];
             /** Format: date-time */
             first_fired_at?: string;
             /** Format: date-time */
@@ -3448,6 +3604,51 @@ export interface components {
             latency_ms?: number;
         } & {
             [key: string]: unknown;
+        };
+        OtelExportConfig: {
+            enabled?: boolean;
+            endpoint?: string;
+            /** @enum {string} */
+            protocol?: "http/protobuf";
+            traces_enabled?: boolean;
+            metrics_enabled?: boolean;
+            include_sentinos_extensions?: boolean;
+            include_internal_service_spans?: boolean;
+            resource_attributes?: {
+                [key: string]: string;
+            };
+            header_values_write_only?: {
+                [key: string]: string;
+            };
+            header_keys_masked?: string[];
+            deep_link_template?: string;
+            /** @enum {string} */
+            privacy_mode?: "policy_enforced";
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        OtelExportStatus: {
+            enabled?: boolean;
+            /** Format: date-time */
+            last_successful_export_at?: string;
+            last_error_summary?: string;
+            queue_depth?: number;
+            dropped_batch_count?: number;
+            traces_exported?: number;
+            metrics_exported?: number;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        OtelExportTestResult: {
+            ok: boolean;
+            trace_delivered?: boolean;
+            metrics_delivered?: boolean;
+            status_code?: number;
+            message?: string;
+            error?: string;
+            endpoint?: string;
+            /** Format: date-time */
+            tested_at?: string;
         };
         AuditLogEntry: {
             /** Format: uuid */
@@ -3787,7 +3988,7 @@ export interface components {
             key: string;
             label: string;
             /** @enum {string} */
-            category: "permission" | "approval" | "budget" | "privacy" | "handoff" | "identity" | "tool" | "context" | "other";
+            category: "permission" | "approval" | "budget" | "privacy" | "prompt_compliance" | "handoff" | "identity" | "tool" | "context" | "other";
             /** @enum {string} */
             status: "CHECKED" | "ALLOWED" | "DENIED" | "ESCALATED" | "SHADOWED";
             reason?: string;
@@ -3795,6 +3996,88 @@ export interface components {
             metadata?: {
                 [key: string]: unknown;
             };
+        };
+        /** @enum {string} */
+        PromptComplianceEnforcementAction: "SHADOW" | "DENY" | "ESCALATE";
+        /** @enum {string} */
+        PromptComplianceSeverity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+        PromptComplianceBuiltinDetectors: {
+            secrets?: boolean;
+            pii?: boolean;
+            phi?: boolean;
+            payment_data?: boolean;
+        };
+        PromptComplianceExactMatchRule: {
+            rule_id?: string;
+            label: string;
+            match: string;
+            description?: string;
+            severity?: components["schemas"]["PromptComplianceSeverity"];
+        };
+        PromptComplianceKeywordRule: {
+            rule_id?: string;
+            label: string;
+            keywords: string[];
+            description?: string;
+            severity?: components["schemas"]["PromptComplianceSeverity"];
+        };
+        PromptComplianceRegexRule: {
+            rule_id?: string;
+            label: string;
+            pattern: string;
+            description?: string;
+            severity?: components["schemas"]["PromptComplianceSeverity"];
+        };
+        PromptCompliancePolicy: {
+            enabled?: boolean;
+            configured_action?: components["schemas"]["PromptComplianceEnforcementAction"];
+            max_findings?: number;
+            builtin_detectors?: components["schemas"]["PromptComplianceBuiltinDetectors"];
+            exact_match_rules?: components["schemas"]["PromptComplianceExactMatchRule"][];
+            keyword_rules?: components["schemas"]["PromptComplianceKeywordRule"][];
+            regex_rules?: components["schemas"]["PromptComplianceRegexRule"][];
+            topic_rules?: components["schemas"]["PromptComplianceKeywordRule"][];
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        PromptComplianceFinding: {
+            rule_id?: string;
+            label?: string;
+            detector_source?: string;
+            kind?: string;
+            category?: string;
+            severity?: components["schemas"]["PromptComplianceSeverity"];
+            path?: string;
+            excerpt?: string;
+            description?: string;
+            metadata?: {
+                [key: string]: unknown;
+            };
+        };
+        PromptComplianceEvaluation: {
+            enabled?: boolean;
+            configured_action?: components["schemas"]["PromptComplianceEnforcementAction"];
+            scanned?: boolean;
+            target_present?: boolean;
+            fragment_count?: number;
+            finding_count?: number;
+            risk_score?: number;
+            max_severity?: components["schemas"]["PromptComplianceSeverity"];
+            matched_categories?: string[];
+            matched_rule_ids?: string[];
+            summary?: string;
+            findings?: components["schemas"]["PromptComplianceFinding"][];
+        };
+        PromptComplianceScanRequest: {
+            intent?: components["schemas"]["DecisionTraceIntent"];
+            payload?: unknown;
+            policy_override?: components["schemas"]["PromptCompliancePolicy"];
+        };
+        PromptComplianceScanResult: {
+            /** Format: date-time */
+            scanned_at: string;
+            policy: components["schemas"]["PromptCompliancePolicy"];
+            evaluation: components["schemas"]["PromptComplianceEvaluation"];
         };
         /** @enum {string} */
         TraceArtifactKind: "file" | "connector" | "domain" | "output" | "handoff" | "other";
@@ -4238,6 +4521,26 @@ export interface components {
             cost_breakdown?: components["schemas"]["DecisionTraceCostBreakdown"];
             cost_events?: components["schemas"]["DecisionTraceCostEvent"][];
         };
+        /** @enum {string} */
+        TraceReplayProfile: "active_policy_chain" | "original_policy" | "original_snapshot" | "original_policy_and_snapshot" | "current_policy_with_original_snapshot";
+        /** @enum {string} */
+        TraceReplayPolicySource: "active_policy_chain" | "original_trace_policy" | "explicit_policy_keys" | "unavailable";
+        /** @enum {string} */
+        TraceReplaySnapshotSource: "original_snapshot" | "current_context" | "bounded_assumptions" | "unavailable";
+        /** @enum {string} */
+        TraceReplayFidelity: "deterministic" | "bounded" | "best_effort" | "unsupported";
+        TraceReplayReconstructionBasis: {
+            requested_profile?: components["schemas"]["TraceReplayProfile"];
+            effective_profile?: components["schemas"]["TraceReplayProfile"];
+            original_policy_key?: string;
+            replay_policy_keys?: string[];
+            context_snapshot_id?: string;
+            distributed_trace_id?: string;
+            distributed_span_id?: string;
+            environment_assumptions?: {
+                [key: string]: unknown;
+            };
+        };
         TraceReplayComparison: {
             decision_changed?: boolean;
             policy_changed?: boolean;
@@ -4255,12 +4558,56 @@ export interface components {
             tenant_id: string;
             /** Format: date-time */
             replayed_at: string;
+            profile?: components["schemas"]["TraceReplayProfile"];
+            policy_source?: components["schemas"]["TraceReplayPolicySource"];
+            snapshot_source?: components["schemas"]["TraceReplaySnapshotSource"];
+            fidelity?: components["schemas"]["TraceReplayFidelity"];
+            fidelity_reasons?: string[];
+            reconstruction_basis?: components["schemas"]["TraceReplayReconstructionBasis"];
+            evidence_export_ready?: boolean;
+            evidence_export_hints?: string[];
             policy_keys: string[];
             drift_detected: boolean;
             original?: components["schemas"]["TraceReplayDecision"];
             replay?: components["schemas"]["TraceReplayDecision"];
             comparison?: components["schemas"]["TraceReplayComparison"];
             ledger_verification?: components["schemas"]["TraceLedgerVerification"];
+        };
+        TraceReplayMatrixEntry: {
+            profile: components["schemas"]["TraceReplayProfile"];
+            policy_source?: components["schemas"]["TraceReplayPolicySource"];
+            snapshot_source?: components["schemas"]["TraceReplaySnapshotSource"];
+            fidelity?: components["schemas"]["TraceReplayFidelity"];
+            fidelity_reasons?: string[];
+            drift_detected: boolean;
+            replay: components["schemas"]["TraceReplayDecision"];
+            comparison?: components["schemas"]["TraceReplayComparison"];
+        };
+        TraceReplayMatrixResponse: {
+            /** Format: uuid */
+            trace_id: string;
+            tenant_id: string;
+            /** Format: date-time */
+            computed_at: string;
+            entries: components["schemas"]["TraceReplayMatrixEntry"][];
+        };
+        TraceReplayExportResponse: {
+            /** Format: uuid */
+            trace_id: string;
+            tenant_id: string;
+            profile?: components["schemas"]["TraceReplayProfile"];
+            export_job: {
+                /** Format: uuid */
+                job_id: string;
+                status: string;
+                object_url?: string;
+                payload_sha256?: string;
+                /** Format: date-time */
+                retention_until?: string;
+                /** Format: date-time */
+                created_at?: string;
+            };
+            replay: components["schemas"]["TraceReplayResponse"];
         };
         TraceRetentionPolicy: {
             tenant_id: string;
@@ -4685,6 +5032,41 @@ export interface components {
             enabled: boolean;
             /** Format: date-time */
             updated_at: string;
+        };
+        SAMLLoginStatus: {
+            /** Format: uuid */
+            org_id: string;
+            org_name: string;
+            org_slug: string;
+            saml_enabled: boolean;
+            saml_configured: boolean;
+            start_supported: boolean;
+            password_enabled: boolean;
+            provider_label: string;
+        };
+        SAMLStartResponse: {
+            redirect_url: string;
+            provider_label: string;
+        };
+        SAMLConnectionCheck: {
+            key: string;
+            label: string;
+            /** @enum {string} */
+            status: "pass" | "warn" | "fail";
+            message: string;
+        };
+        SAMLConnectionTestResult: {
+            provider_label: string;
+            /** @enum {string} */
+            overall_status: "pass" | "warn" | "fail";
+            login_methods_enabled: boolean;
+            connection_enabled: boolean;
+            password_fallback_enabled: boolean;
+            start_supported: boolean;
+            checks: components["schemas"]["SAMLConnectionCheck"][];
+            next_steps: string[];
+            /** Format: date-time */
+            tested_at: string;
         };
         AuthNMappingRecord: {
             /** Format: uuid */
@@ -5281,11 +5663,41 @@ export interface components {
                     key: string;
                     label: string;
                     /** @enum {string} */
-                    category: "permission" | "approval" | "budget" | "privacy" | "handoff" | "identity" | "tool" | "context" | "other";
+                    category: "permission" | "approval" | "budget" | "privacy" | "prompt_compliance" | "handoff" | "identity" | "tool" | "context" | "other";
                     /** @enum {string} */
                     status: "CHECKED" | "ALLOWED" | "DENIED" | "ESCALATED" | "SHADOWED";
                     reason?: string;
                     matched?: boolean;
+                    metadata?: {
+                        [key: string]: unknown;
+                    };
+                }[];
+            };
+            prompt_compliance?: {
+                enabled?: boolean;
+                /** @enum {string} */
+                configured_action?: "SHADOW" | "DENY" | "ESCALATE";
+                scanned?: boolean;
+                target_present?: boolean;
+                fragment_count?: number;
+                finding_count?: number;
+                risk_score?: number;
+                /** @enum {string} */
+                max_severity?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+                matched_categories?: string[];
+                matched_rule_ids?: string[];
+                summary?: string;
+                findings?: {
+                    rule_id?: string;
+                    label?: string;
+                    detector_source?: string;
+                    kind?: string;
+                    category?: string;
+                    /** @enum {string} */
+                    severity?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+                    path?: string;
+                    excerpt?: string;
+                    description?: string;
                     metadata?: {
                         [key: string]: unknown;
                     };
@@ -5372,6 +5784,8 @@ export interface components {
             } & {
                 [key: string]: unknown;
             };
+            distributed_trace_id?: string;
+            distributed_span_id?: string;
             privacy?: {
                 policy_version?: string;
                 write_redaction_applied?: boolean;
@@ -5675,6 +6089,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KernelExecuteResponse"];
+                };
+            };
+        };
+    };
+    kernelPromptComplianceScan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromptComplianceScanRequest"];
+            };
+        };
+        responses: {
+            /** @description Structured prompt compliance findings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromptComplianceScanResult"];
                 };
             };
         };
@@ -7305,8 +7743,13 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
+                    profile?: components["schemas"]["TraceReplayProfile"];
                     policy_keys?: string[];
                     include_explain?: boolean;
+                    environment_assumptions?: {
+                        [key: string]: unknown;
+                    };
+                    include_evidence_hints?: boolean;
                 };
             };
         };
@@ -7318,6 +7761,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TraceReplayResponse"];
+                };
+            };
+        };
+    };
+    traceReplayMatrix: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    policy_keys?: string[];
+                    include_explain?: boolean;
+                    environment_assumptions?: {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Replay matrix result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TraceReplayMatrixResponse"];
+                };
+            };
+        };
+    };
+    traceReplayExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    profile?: components["schemas"]["TraceReplayProfile"];
+                    policy_keys?: string[];
+                    include_explain?: boolean;
+                    environment_assumptions?: {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+        responses: {
+            /** @description Replay evidence export */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TraceReplayExportResponse"];
                 };
             };
         };
@@ -7348,6 +7856,7 @@ export interface operations {
         parameters: {
             query?: {
                 tenant_id?: string;
+                trace_id?: string;
                 agent_id?: string;
                 session_id?: string;
                 policy_id?: string;
@@ -8304,6 +8813,90 @@ export interface operations {
             };
         };
     };
+    getOtelExportConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OTLP export config */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OtelExportConfig"];
+                };
+            };
+        };
+    };
+    updateOtelExportConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OtelExportConfig"];
+            };
+        };
+        responses: {
+            /** @description Updated OTLP export config */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OtelExportConfig"];
+                };
+            };
+        };
+    };
+    getOtelExportStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OTLP export status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OtelExportStatus"];
+                };
+            };
+        };
+    };
+    testOtelExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OTLP export test result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OtelExportTestResult"];
+                };
+            };
+        };
+    };
     exportDatadog: {
         parameters: {
             query?: never;
@@ -8762,6 +9355,55 @@ export interface operations {
                     "application/json": {
                         tokens: components["schemas"]["AuthTokens"];
                     };
+                };
+            };
+        };
+    };
+    controlplaneGetSAMLLoginStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SAML sign-in readiness */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SAMLLoginStatus"];
+                };
+            };
+        };
+    };
+    controlplaneStartSAMLLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    org_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Browser SAML redirect bootstrap */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SAMLStartResponse"];
                 };
             };
         };
@@ -10070,6 +10712,28 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    controlplaneTestSamlConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SAML connection test result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SAMLConnectionTestResult"];
                 };
             };
         };
