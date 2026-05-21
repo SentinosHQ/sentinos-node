@@ -828,6 +828,11 @@ describe("Sentinos Node SDK route parity", () => {
       kind: "webhook",
       config: { url: "https://hooks.sentinos.demo/test" },
     });
+    await client.kernel.exportDatadog({
+      api_key: "dd-demo",
+      site: "datadoghq.com",
+      include_events: true,
+    });
 
     expect(calls.map((call) => call.url)).toEqual([
       "https://api.sentinoshq.test/v1/integrations/channels?kind=slack&limit=20",
@@ -837,6 +842,7 @@ describe("Sentinos Node SDK route parity", () => {
       "https://api.sentinoshq.test/v1/integrations/channels/chan_123",
       "https://api.sentinoshq.test/v1/integrations/channels/chan_123/test",
       "https://api.sentinoshq.test/v1/integrations/channels/validate",
+      "https://api.sentinoshq.test/v1/integrations/datadog/export",
     ]);
 
     expect(calls.map((call) => call.init?.method ?? "GET")).toEqual([
@@ -845,6 +851,7 @@ describe("Sentinos Node SDK route parity", () => {
       "POST",
       "PUT",
       "DELETE",
+      "POST",
       "POST",
       "POST",
     ]);

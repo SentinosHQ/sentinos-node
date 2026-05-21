@@ -163,6 +163,23 @@ const result = await adapter.create({
 console.log(result.trace.trace_id, result.trace.decision);
 ```
 
+`LLMGuard` and provider adapters attach an operator-safe `metadata.agent_rationale`
+envelope before execution. The envelope is derived from runtime context such as
+provider, model, operation, tool, workflow metadata, and optional concise
+rationale fields. It is not hidden chain-of-thought capture; forbidden hidden or
+raw fields are dropped before trace persistence.
+
+Runnable examples are included under `examples/`, including governed OpenAI
+Responses calls, OpenAI Agents SDK tools, x402-style agent payments, Stripe
+refund governance, OTLP export helpers, and trace replay evidence.
+
+Validation:
+
+```bash
+npm test
+npm run build
+```
+
 ## Client surface
 
 - `client.kernel` for governed execution and runtime operations

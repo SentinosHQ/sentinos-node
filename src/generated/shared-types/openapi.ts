@@ -2865,6 +2865,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/orgs/{org_id}/evaluation/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ingest an evaluation milestone event for an org */
+        post: operations["controlplaneIngestEvaluationEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orgs/{org_id}/evaluation/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the org-wide evaluation funnel summary */
+        get: operations["controlplaneGetEvaluationSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/orgs/{org_id}/audit/events": {
         parameters: {
             query?: never;
@@ -3723,6 +3757,76 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        EvaluationFunnelEventInput: {
+            tenant_id?: string;
+            /** @enum {string} */
+            name: "evaluation_started" | "evaluation_workspace_activated" | "guided_demo_started" | "governed_trace_created" | "escalation_observed" | "deny_observed" | "trace_detail_opened" | "trace_evidence_opened" | "agentic_payment_preset_used" | "payment_governance_opened" | "sdk_next_step_clicked" | "rollout_plan_requested" | "founder_demo_requested";
+            path: string;
+            hash?: string;
+            /** Format: date-time */
+            occurred_at?: string;
+            props?: {
+                [key: string]: unknown;
+            };
+        };
+        EvaluationFunnelEvent: {
+            /** Format: uuid */
+            event_id?: string;
+            /** Format: uuid */
+            org_id?: string;
+            tenant_id?: string;
+            run_id?: string;
+            /** Format: uuid */
+            principal_id?: string;
+            /** Format: uuid */
+            session_id?: string;
+            /** @enum {string} */
+            name: "evaluation_started" | "evaluation_workspace_activated" | "guided_demo_started" | "governed_trace_created" | "escalation_observed" | "deny_observed" | "trace_detail_opened" | "trace_evidence_opened" | "agentic_payment_preset_used" | "payment_governance_opened" | "sdk_next_step_clicked" | "rollout_plan_requested" | "founder_demo_requested";
+            source?: string;
+            path: string;
+            hash: string;
+            props: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            occurred_at: string;
+            /** Format: date-time */
+            ingested_at?: string;
+            user_agent?: string;
+        };
+        EvaluationFunnelSourceSummary: {
+            source: string;
+            evaluations_started: number;
+            demo_completed: number;
+            founder_conversations: number;
+        };
+        EvaluationFunnelSummary: {
+            /** @enum {string} */
+            mode: "org_wide" | "browser_local_preview";
+            /** Format: uuid */
+            org_id?: string;
+            tenant_id?: string;
+            window_days: number;
+            /** Format: date-time */
+            window_start: string;
+            /** Format: date-time */
+            window_end: string;
+            events_captured: number;
+            evaluations_started: number;
+            activated_workspaces: number;
+            governed_trace_reached: number;
+            governance_outcome_reached: number;
+            trace_inspection_reached: number;
+            sdk_next_step_reached: number;
+            founder_conversations: number;
+            demo_completed: number;
+            demo_completion_rate?: number | null;
+            median_time_to_first_trace_ms?: number | null;
+            median_time_to_first_runtime_proof_ms?: number | null;
+            median_time_to_first_inspection_ms?: number | null;
+            top_sources: components["schemas"]["EvaluationFunnelSourceSummary"][];
+            recent_events: components["schemas"]["EvaluationFunnelEvent"][];
+        };
         UnifiedAuditQuery: {
             /** Format: date-time */
             from?: string;
@@ -4362,6 +4466,8 @@ export interface components {
              *     Supported keys include:
              *     - `skip_connector` (boolean): evaluate policy + persist decision trace without invoking Kernel connector execution.
              *       Use this for external LLM/provider calls that are executed by your application after Sentinos authorization.
+             *     - `agent_rationale` (object): pre-execution structured rationale; Kernel normalizes this into
+             *       `DecisionTrace.agent_rationale` and policy input.
              */
             metadata?: {
                 [key: string]: unknown;
@@ -4424,6 +4530,10 @@ export interface components {
             graph_context?: {
                 [key: string]: unknown;
             };
+            /** @description Normalized pre-execution agent rationale envelope. */
+            agent_rationale?: {
+                [key: string]: unknown;
+            };
         } & {
             [key: string]: unknown;
         };
@@ -4459,6 +4569,7 @@ export interface components {
             data_class?: components["schemas"]["TraceDataClass"];
             agent_id?: string;
             session_id?: string;
+            tool?: string;
             /** Format: date-time */
             created_at: string;
             policy_id?: string;
@@ -5799,6 +5910,72 @@ export interface components {
                     after_hash: string;
                     reason: string;
                 }[];
+            };
+            agent_rationale?: {
+                /** @constant */
+                schema_version: "agent-rationale.v1";
+                /** Format: date-time */
+                captured_at: string;
+                /** @constant */
+                capture_phase: "pre_execution";
+                /** @enum {string} */
+                capture_mode: "runtime_derived" | "sdk_derived" | "model_supplied" | "workflow_supplied" | "mixed";
+                sources: {
+                    /** @enum {string} */
+                    kind: "sdk" | "runtime" | "model" | "workflow";
+                    field_paths?: string[];
+                }[];
+                summary?: string;
+                goal?: string;
+                decision_basis?: string[];
+                expected_outcome?: string;
+                alternatives_considered?: string[];
+                confidence?: number;
+                runtime?: {
+                    integration?: string;
+                    provider?: string;
+                    model?: string;
+                    operation?: string;
+                    tool?: string;
+                    workflow?: string;
+                    autonomy?: string;
+                };
+                risk_context?: {
+                    data_class?: string;
+                    side_effects?: string[];
+                    external_domains?: string[];
+                    requires_approval?: boolean;
+                };
+                safety?: {
+                    hidden_reasoning_dropped?: boolean;
+                    forbidden_fields?: string[];
+                };
+            };
+            payment_context?: {
+                protocol?: string;
+                provider?: string;
+                rail?: string;
+                merchant?: string;
+                resource?: string;
+                amount?: string | number;
+                maxAmountRequired?: string | number;
+                asset?: string;
+                currency?: string;
+                network?: string;
+                wallet_reference?: string;
+                settlement_reference?: string;
+                payment_id?: string;
+                refund_id?: string;
+                charge_id?: string;
+                budget_window?: {
+                    max_usd?: string | number;
+                    expires_in_seconds?: number;
+                    window_seconds?: number;
+                } & {
+                    [key: string]: unknown;
+                };
+            } & {
+                [key: string]: unknown;
             };
             reasoning?: {
                 captured_at_decision_time?: boolean;
@@ -7859,6 +8036,7 @@ export interface operations {
                 trace_id?: string;
                 agent_id?: string;
                 session_id?: string;
+                tool?: string;
                 policy_id?: string;
                 decision?: components["schemas"]["Decision"];
                 data_class?: components["schemas"]["TraceDataClass"];
@@ -11391,6 +11569,63 @@ export interface operations {
                         /** Format: uuid */
                         event_id: string;
                     };
+                };
+            };
+        };
+    };
+    controlplaneIngestEvaluationEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    event: components["schemas"]["EvaluationFunnelEventInput"];
+                };
+            };
+        };
+        responses: {
+            /** @description Event accepted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok: boolean;
+                        /** Format: uuid */
+                        event_id: string;
+                    };
+                };
+            };
+        };
+    };
+    controlplaneGetEvaluationSummary: {
+        parameters: {
+            query?: {
+                window_days?: number;
+                tenant_id?: string;
+            };
+            header?: never;
+            path: {
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Evaluation funnel summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationFunnelSummary"];
                 };
             };
         };

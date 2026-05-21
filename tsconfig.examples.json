@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "noEmit": true,
+    "paths": {
+      "@sentinos/node": ["./src/index.ts"]
+    }
+  },
+  "include": ["examples/**/*.ts", "tests/types/**/*.d.ts"],
+  "exclude": ["dist", "node_modules"]
+}

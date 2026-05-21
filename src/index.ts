@@ -3,6 +3,8 @@ export * from "./base.js";
 export * from "./client.js";
 export * from "./http.js";
 export * from "./integrations/llm.js";
+export * from "./integrations/otel-destinations.js";
 export * from "./integrations/providers.js";
 export * from "./integrations/telemetry.js";
+export * from "./integrations/tools.js";
 export * from "./types.js";

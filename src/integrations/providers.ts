@@ -1,4 +1,4 @@
-import { LLMGuard, type LLMPolicyResult } from "./llm.js";
+import { LLMGuard, type AgentRationaleInput, type LLMPolicyResult } from "./llm.js";
 
 type OpenAIChatCreateFn<T> = (args: {
   model: string;
@@ -41,11 +41,12 @@ export class OpenAIChatCompletionsAdapter<T = unknown> {
     model: string;
     messages: Array<Record<string, unknown>>;
     metadata?: Record<string, unknown>;
+    rationale?: AgentRationaleInput;
     tenantId?: string;
     orgId?: string;
     [key: string]: unknown;
   }): Promise<LLMPolicyResult<T>> {
-    const { model, messages, metadata, tenantId, orgId, ...rest } = args;
+    const { model, messages, metadata, rationale, tenantId, orgId, ...rest } = args;
     const request: Record<string, unknown> = { model, messages };
     if (Object.keys(rest).length) request.params = rest;
     return this.guard.run({
@@ -54,6 +55,7 @@ export class OpenAIChatCompletionsAdapter<T = unknown> {
       request,
       model,
       metadata,
+      rationale,
       tenantId,
       orgId,
       invoke: () => this.createFn({ model, messages, ...rest }),
@@ -84,11 +86,12 @@ export class OpenAIResponsesAdapter<T = unknown> {
     model: string;
     input: unknown;
     metadata?: Record<string, unknown>;
+    rationale?: AgentRationaleInput;
     tenantId?: string;
     orgId?: string;
     [key: string]: unknown;
   }): Promise<LLMPolicyResult<T>> {
-    const { model, input, metadata, tenantId, orgId, ...rest } = args;
+    const { model, input, metadata, rationale, tenantId, orgId, ...rest } = args;
     const request: Record<string, unknown> = { model, input };
     if (Object.keys(rest).length) request.params = rest;
     return this.guard.run({
@@ -97,6 +100,7 @@ export class OpenAIResponsesAdapter<T = unknown> {
       request,
       model,
       metadata,
+      rationale,
       tenantId,
       orgId,
       invoke: () => this.createFn({ model, input, ...rest }),
@@ -124,11 +128,12 @@ export class AnthropicMessagesAdapter<T = unknown> {
     model: string;
     messages: Array<Record<string, unknown>>;
     metadata?: Record<string, unknown>;
+    rationale?: AgentRationaleInput;
     tenantId?: string;
     orgId?: string;
     [key: string]: unknown;
   }): Promise<LLMPolicyResult<T>> {
-    const { model, messages, metadata, tenantId, orgId, ...rest } = args;
+    const { model, messages, metadata, rationale, tenantId, orgId, ...rest } = args;
     const request: Record<string, unknown> = { model, messages };
     if (Object.keys(rest).length) request.params = rest;
     return this.guard.run({
@@ -137,6 +142,7 @@ export class AnthropicMessagesAdapter<T = unknown> {
       request,
       model,
       metadata,
+      rationale,
       tenantId,
       orgId,
       invoke: () => this.createFn({ model, messages, ...rest }),

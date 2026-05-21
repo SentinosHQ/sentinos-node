@@ -1,6 +1,23 @@
 import type { DecisionTrace, KernelExecuteResponse } from "../types.js";
 import type { KernelClient } from "../clients/kernel.js";
 
+const FORBIDDEN_RATIONALE_KEYS = new Set([
+  "chain_of_thought",
+  "hidden_reasoning",
+  "raw_prompt",
+  "raw_prompts",
+  "prompt",
+  "prompts",
+  "messages",
+  "raw_messages",
+  "tool_args",
+  "raw_tool_args",
+  "tool_output",
+  "raw_tool_output",
+  "tool_outputs",
+  "raw_tool_outputs",
+]);
+
 export class LLMPolicyExecutionError<T = unknown> extends Error {
   readonly trace: DecisionTrace;
 
@@ -19,6 +36,23 @@ export type LLMPolicyResult<T> = {
   operation: string;
   trace: DecisionTrace;
   response: T;
+};
+
+export type AgentRationaleInput = {
+  summary?: string;
+  goal?: string;
+  decision_basis?: string[];
+  expected_outcome?: string;
+  alternatives_considered?: string[];
+  confidence?: number;
+  workflow?: string;
+  autonomy?: string;
+  risk_context?: {
+    data_class?: string;
+    side_effects?: string[];
+    external_domains?: string[];
+    requires_approval?: boolean;
+  };
 };
 
 function toolName(provider: string, operation: string): string {
@@ -48,6 +82,91 @@ function summarizeResponse(response: unknown): Record<string, unknown> {
   return { response_type: Array.isArray(response) ? "array" : typeof response };
 }
 
+function sanitizeRationale(input: AgentRationaleInput | undefined): {
+  value: AgentRationaleInput;
+  forbidden: string[];
+  hiddenReasoningDropped: boolean;
+} {
+  if (!input) return { value: {}, forbidden: [], hiddenReasoningDropped: false };
+  const value: Record<string, unknown> = {};
+  const forbidden: string[] = [];
+  let hiddenReasoningDropped = false;
+
+  for (const [key, raw] of Object.entries(input as Record<string, unknown>)) {
+    if (FORBIDDEN_RATIONALE_KEYS.has(key)) {
+      forbidden.push(`$.metadata.agent_rationale.${key}`);
+      if (key === "chain_of_thought" || key === "hidden_reasoning") hiddenReasoningDropped = true;
+      continue;
+    }
+    value[key] = raw;
+  }
+
+  return { value: value as AgentRationaleInput, forbidden, hiddenReasoningDropped };
+}
+
+function metadataRationale(metadata: Record<string, unknown> | undefined): AgentRationaleInput | undefined {
+  const candidate = metadata?.agent_rationale;
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return undefined;
+  return candidate as AgentRationaleInput;
+}
+
+function mergeRationaleInputs(
+  metadata: Record<string, unknown> | undefined,
+  rationale: AgentRationaleInput | undefined,
+): AgentRationaleInput | undefined {
+  const fromMetadata = metadataRationale(metadata);
+  if (!fromMetadata) return rationale;
+  return { ...fromMetadata, ...(rationale || {}) };
+}
+
+export function buildAgentRationale(opts: {
+  provider: string;
+  operation: string;
+  model?: string;
+  tool?: string;
+  integration?: string;
+  rationale?: AgentRationaleInput;
+}): Record<string, unknown> {
+  const sanitized = sanitizeRationale(opts.rationale);
+  const rationale = sanitized.value;
+  const hasStructured = Object.keys(rationale).some((key) => key !== "workflow" && key !== "autonomy");
+  const sources = [{ kind: "sdk", field_paths: ["provider", "operation", "model", "toolName"] }];
+  if (hasStructured) sources.push({ kind: "workflow", field_paths: ["metadata.agent_rationale"] });
+
+  return {
+    schema_version: "agent-rationale.v1",
+    captured_at: new Date().toISOString(),
+    capture_phase: "pre_execution",
+    capture_mode: hasStructured ? "mixed" : "sdk_derived",
+    sources,
+    summary: rationale.summary ?? `Authorize ${opts.provider}.${opts.operation} before execution.`,
+    goal: rationale.goal,
+    decision_basis: rationale.decision_basis ?? [
+      `Provider: ${opts.provider}`,
+      `Operation: ${opts.operation}`,
+      ...(opts.model ? [`Model: ${opts.model}`] : []),
+      ...(opts.tool ? [`Tool: ${opts.tool}`] : []),
+    ],
+    expected_outcome: rationale.expected_outcome,
+    alternatives_considered: rationale.alternatives_considered,
+    confidence: rationale.confidence,
+    runtime: {
+      integration: opts.integration ?? "llm_guard",
+      provider: opts.provider,
+      model: opts.model,
+      operation: opts.operation,
+      tool: opts.tool,
+      workflow: rationale.workflow,
+      autonomy: rationale.autonomy,
+    },
+    risk_context: rationale.risk_context,
+    safety: {
+      hidden_reasoning_dropped: sanitized.hiddenReasoningDropped || undefined,
+      forbidden_fields: sanitized.forbidden.length ? sanitized.forbidden : undefined,
+    },
+  };
+}
+
 export type LLMGuardOptions = {
   kernel: KernelClient;
   agentId: string;
@@ -64,6 +183,7 @@ export type LLMGuardAuthorizeOptions = {
   tenantId?: string;
   orgId?: string;
   toolName?: string;
+  rationale?: AgentRationaleInput;
 };
 
 export type LLMGuardRunOptions<T> = LLMGuardAuthorizeOptions & {
@@ -92,12 +212,20 @@ export class LLMGuard {
     };
     if (opts.model !== undefined) args.model = opts.model;
 
+    const rationale = mergeRationaleInputs(opts.metadata, opts.rationale);
     const metadata: Record<string, unknown> = {
       skip_connector: true,
       integration_kind: "llm",
       provider: opts.provider,
       operation: opts.operation,
       ...(opts.metadata || {}),
+      agent_rationale: buildAgentRationale({
+        provider: opts.provider,
+        operation: opts.operation,
+        model: opts.model,
+        tool: opts.toolName || toolName(opts.provider, opts.operation),
+        rationale,
+      }),
     };
 
     const executeResponse = await this.kernel.execute({

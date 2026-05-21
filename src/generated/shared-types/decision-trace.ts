@@ -269,6 +269,58 @@ export interface DecisionTracePrivacy {
   events?: DecisionTracePrivacyRedactionEvent[];
 }
 
+export type AgentRationaleCaptureMode =
+  | "runtime_derived"
+  | "sdk_derived"
+  | "model_supplied"
+  | "workflow_supplied"
+  | "mixed";
+export type AgentRationaleSourceKind = "sdk" | "runtime" | "model" | "workflow";
+
+export interface AgentRationaleSource {
+  kind: AgentRationaleSourceKind;
+  field_paths?: string[];
+}
+
+export interface AgentRationaleRuntime {
+  integration?: string;
+  provider?: string;
+  model?: string;
+  operation?: string;
+  tool?: string;
+  workflow?: string;
+  autonomy?: string;
+}
+
+export interface AgentRationaleRiskContext {
+  data_class?: string;
+  side_effects?: string[];
+  external_domains?: string[];
+  requires_approval?: boolean;
+}
+
+export interface AgentRationaleSafety {
+  hidden_reasoning_dropped?: boolean;
+  forbidden_fields?: string[];
+}
+
+export interface AgentRationale {
+  schema_version: "agent-rationale.v1";
+  captured_at: string;
+  capture_phase: "pre_execution";
+  capture_mode: AgentRationaleCaptureMode;
+  sources: AgentRationaleSource[];
+  summary?: string;
+  goal?: string;
+  decision_basis?: string[];
+  expected_outcome?: string;
+  alternatives_considered?: string[];
+  confidence?: number;
+  runtime?: AgentRationaleRuntime;
+  risk_context?: AgentRationaleRiskContext;
+  safety?: AgentRationaleSafety;
+}
+
 export interface GarbageCanContext {
   problems_present?: string[];
   solutions_available?: string[];
@@ -288,6 +340,31 @@ export interface OrganizationalContext {
   system_state?: string;
   variation_type?: string;
   external_factors?: string[];
+}
+
+export interface DecisionTracePaymentContext {
+  protocol?: string;
+  provider?: string;
+  rail?: string;
+  merchant?: string;
+  resource?: string;
+  amount?: string | number;
+  maxAmountRequired?: string | number;
+  asset?: string;
+  currency?: string;
+  network?: string;
+  wallet_reference?: string;
+  settlement_reference?: string;
+  payment_id?: string;
+  refund_id?: string;
+  charge_id?: string;
+  budget_window?: {
+    max_usd?: string | number;
+    expires_in_seconds?: number;
+    window_seconds?: number;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
 }
 
 export interface DecisionTraceV1 {
@@ -328,6 +405,8 @@ export interface DecisionTraceV1 {
   provenance?: unknown[];
   signatures?: DecisionTraceSignatures;
   privacy?: DecisionTracePrivacy;
+  agent_rationale?: AgentRationale;
+  payment_context?: DecisionTracePaymentContext;
   cost_breakdown?: DecisionTraceCostBreakdown;
   cost_events?: DecisionTraceCostEvent[];
   artifact_lineage_summary?: TraceArtifactLineageSummary;

@@ -5,6 +5,7 @@ import {
   LLMGuard,
   LLMPolicyDeniedError,
   createOpenAIChatAdapter,
+  makeGuardedTool,
   type DecisionTrace,
 } from "../src";
 
@@ -43,6 +44,11 @@ describe("Node LLM integrations", () => {
       operation: "chat.completions",
       model: "gpt-4.1-mini",
       request: { model: "gpt-4.1-mini", messages: [{ role: "user", content: "hello" }] },
+      metadata: {
+        agent_rationale: {
+          goal: "Answer a customer support question.",
+        },
+      },
       invoke: async () => ({ id: "resp_123", model: "gpt-4.1-mini", usage: { total_tokens: 12 } }),
     });
 
@@ -52,6 +58,18 @@ describe("Node LLM integrations", () => {
         tenant_id: "org_123",
         agent_id: "assistant-1",
         session_id: "sess-123",
+        metadata: expect.objectContaining({
+          agent_rationale: expect.objectContaining({
+            schema_version: "agent-rationale.v1",
+            capture_mode: "mixed",
+            goal: "Answer a customer support question.",
+            runtime: expect.objectContaining({
+              provider: "openai",
+              model: "gpt-4.1-mini",
+              operation: "chat.completions",
+            }),
+          }),
+        }),
       }),
     );
     expect(kernel.getTrace).toHaveBeenCalledWith("trace_123");
@@ -127,6 +145,11 @@ describe("Node LLM integrations", () => {
         model: "gpt-4.1-mini",
         messages: [{ role: "user", content: "hello" }],
         temperature: 0.2,
+        rationale: {
+          goal: "Answer the support question.",
+          hidden_reasoning: "do not capture this",
+          messages: [{ role: "user", content: "raw" }],
+        } as any,
       }),
     ).resolves.toMatchObject({
       provider: "openai",
@@ -151,10 +174,110 @@ describe("Node LLM integrations", () => {
       messages: [{ role: "user", content: "hello" }],
       temperature: 0.2,
     });
+    expect(kernel.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          agent_rationale: expect.objectContaining({
+            capture_mode: "mixed",
+            goal: "Answer the support question.",
+            safety: expect.objectContaining({
+              hidden_reasoning_dropped: true,
+              forbidden_fields: expect.arrayContaining([
+                "$.metadata.agent_rationale.hidden_reasoning",
+                "$.metadata.agent_rationale.messages",
+              ]),
+            }),
+          }),
+        }),
+      }),
+    );
     expect(anthropicCreate).toHaveBeenCalledWith({
       model: "claude-3-7-sonnet",
       messages: [{ role: "user", content: "hello" }],
       max_tokens: 256,
     });
+  });
+
+  it("wraps governed tool execution with allow and deny semantics", async () => {
+    const kernel = {
+      execute: vi.fn().mockResolvedValueOnce({ trace_id: "trace_tool_allow", decision: "ALLOW" })
+        .mockResolvedValueOnce({ trace_id: "trace_tool_deny", decision: "DENY" }),
+      getTrace: vi.fn()
+        .mockResolvedValueOnce(trace("ALLOW"))
+        .mockResolvedValueOnce(trace("DENY")),
+      appendSessionEvent: vi.fn().mockResolvedValue({ ok: true }),
+    } as any;
+
+    const guard = new LLMGuard({
+      kernel,
+      agentId: "assistant-tools",
+      sessionId: "sess-tools",
+      tenantId: "org_123",
+    });
+
+    const execute = vi.fn(async (args: Record<string, unknown>) => ({
+      ok: true,
+      refundId: "re_123",
+      args,
+    }));
+
+    const guardedRefund = makeGuardedTool({
+      guard,
+      toolName: "stripe.refund",
+      execute,
+      rationale: () => ({
+        summary: "Issue a customer refund when policy allows it.",
+        tool_args: { payment_intent: "raw" },
+      } as any),
+    });
+
+    await expect(
+      guardedRefund({
+        payment_intent: "pi_123",
+        amount: 1200,
+      }),
+    ).resolves.toMatchObject({
+      trace_id: "trace_123",
+      decision: "ALLOW",
+      result: {
+        ok: true,
+        refundId: "re_123",
+      },
+    });
+
+    await expect(
+      guardedRefund({
+        payment_intent: "pi_999",
+        amount: 2400,
+      }),
+    ).resolves.toMatchObject({
+      trace_id: "trace_123",
+      decision: "DENY",
+      reason: "blocked",
+    });
+
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(kernel.appendSessionEvent).toHaveBeenCalledWith(
+      "sess-tools",
+      expect.objectContaining({
+        type: "llm.response",
+        payload: expect.objectContaining({
+          provider: "tool-runtime",
+          operation: "stripe.refund",
+        }),
+      }),
+    );
+    expect(kernel.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          agent_rationale: expect.objectContaining({
+            runtime: expect.objectContaining({ tool: "tool.stripe.refund" }),
+            safety: expect.objectContaining({
+              forbidden_fields: expect.arrayContaining(["$.metadata.agent_rationale.tool_args"]),
+            }),
+          }),
+        }),
+      }),
+    );
   });
 });
